@@ -88,7 +88,7 @@ bool dwSerial::Send(std::string value)
 {
     if(!IsOpen())
         return false;
-    int rlen= write(handle,value.c_str(),value.size());
+    unsigned int rlen= write(handle,value.c_str(),value.size());
     return(rlen == value.size());
 }
 
@@ -96,7 +96,7 @@ bool dwSerial::SenddwCommand(std::string cmd)
 {
     if(!IsOpen())
         return false;
-    int rlen= write(handle,cmd.c_str(),cmd.size());
+    unsigned int rlen= write(handle,cmd.c_str(),cmd.size());
     printf("send %s\n", cmd.c_str());
     return(rlen == cmd.size());
 }
@@ -119,7 +119,7 @@ int  dwSerial::Receive( unsigned char  * data, int len)
 }
 
 
-int dwSerial::ReceiveLocation(unsigned char * line, int maxLen)
+unsigned int dwSerial::ReceiveLocation(unsigned char * line, int maxLen)
 {
     int ret = 0;
     if(!IsOpen())

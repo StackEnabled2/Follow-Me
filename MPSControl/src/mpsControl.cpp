@@ -148,15 +148,14 @@ void MPSControl::start()
 
 void unblockTCPListener()
 {
-    int sockfd, portno, n;
+    int sockfd, portno;
     struct sockaddr_in serv_addr;
     struct hostent *server;
 
-    char buffer[256];
     portno = 8080;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
-        error("ERROR opening socket");
+        error((char *) "ERROR opening socket");
     server = gethostbyname("127.0.0.1");
     if (server == NULL)
     {
@@ -170,7 +169,7 @@ void unblockTCPListener()
           server->h_length);
     serv_addr.sin_port = htons(portno);
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-        error("ERROR connecting");
+        error((char *) "ERROR connecting");
     printf("Should have unblocked the TCP listen\n");
 }
 
@@ -374,6 +373,7 @@ int MPSControl::receivePGN(unsigned char *pgn, unsigned char *data)
         pthread_yield();
         return i;
     }
+    return 0;
 }
 static int verbose;
 
@@ -544,7 +544,7 @@ int MPSControl::checkTCPMessage(int datalength, unsigned char data[])
     int dbeefloc = 0;
     //---- wait for a number from client ---
     // minimum size
-    if (datalength <( (unsigned int) sizeof(msg_header) + sizeof(DEADBEEF)))
+    if (datalength < (sizeof(msg_header) + sizeof(DEADBEEF)))
     {
         ret = -1;
     }
@@ -776,10 +776,6 @@ void MPSControl:: setListenerUSB(char * usb)
 static void *rcvCAN_thread(void *ptr)
 {
     MPSControl *context = (MPSControl *) ptr;
-    clock_t now = clock();
-    clock_t last = clock();
-    double timePassed;
-    double mPassed;
 
     while (!context->killthreads)
     {
@@ -798,17 +794,6 @@ static void *rcvCAN_thread(void *ptr)
             continue;
         }
 
-        now = clock();
-        timePassed = now - last;
-        mPassed = timePassed / ((double) CLOCKS_PER_SEC/1000);
-        //if (mPassed < 3.0)
-        //{
-        //printf("timePassed: %f  mpassed: %f", timePassed, mPassed);
-        //    usleep(DELAY);
-        //    continue;
-        //}
-
-        last = clock();
         *(data) = (unsigned char) ++nbytes;
         if (context->clientsocket > 0)
         {
@@ -893,13 +878,11 @@ static void *dwRCV_thread(void *ptr)
         return nullptr;
     bool toggle = true;
     context->serial.SenddwCommand("\r\r");
-    int tries = 0;
     int wait=0;
     while (!context->killthreads)
     {
         memset(line, 0, sizeof line);
-        int len = context->serial.ReceiveLocation(line, sizeof line);
-        printf ("received %d bytes\n",len);
+        unsigned int len = context->serial.ReceiveLocation(line, sizeof line);
         if ((line[7]== 'P'
                   && line[8]== 'O')
                  || ( line[0]== 'P'
@@ -920,7 +903,6 @@ static void *dwRCV_thread(void *ptr)
         else
         {
             string lec("dwm> lec\n");
-            printf("compare\n");
             if (lec.compare((const char *)line) == 0)
             {
                 wait = 0;
@@ -932,11 +914,6 @@ static void *dwRCV_thread(void *ptr)
             }
             pthread_yield();
             usleep(DELAY1SEC/2);
-            printf("came back after sleeep\n");
-
-            //context->serial.SenddwCommand("abc\r");
-
-
         }
         pthread_yield();
     }
@@ -958,13 +935,13 @@ static void *dwRCV_thread(void *ptr)
             }
             message[0] = 0x01;
             createPGNHeader(0x50, &message[1]);
-            int i=3;
+            unsigned int i=3;
             for (; i < sizeof message - 3; i++)
                 //for (i=0; i < sizeof message; i++)
             {
                 message[i] = line[i-3];
             }
-            int size = strlen((const char *)message);
+            unsigned int size = strlen((const char *)message);
             if (size < sizeof message - 7) {
                 message[size] = 0xde;
                 message[size+1] = 0xad;
